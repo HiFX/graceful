@@ -83,7 +83,7 @@ func createListener(sleep time.Duration) (*http.Server, net.Listener, error) {
 	})
 
 	time.Sleep(1 * time.Second)
-	server := &http.Server{Addr: ":9654", Handler: mux}
+	server := configureServer(&http.Server{Addr: ":9654", Handler: mux})
 	l, err := net.Listen("tcp", ":9654")
 	if err != nil {
 	}
@@ -345,7 +345,7 @@ func hijackingListener(srv *Server) (*http.Server, net.Listener, error) {
 		bufrw.Flush()
 	})
 
-	server := &http.Server{Addr: ":9654", Handler: mux}
+	server := configureServer(&http.Server{Addr: ":9654", Handler: mux})
 	l, err := net.Listen("tcp", ":9654")
 	return server, l, err
 }

@@ -72,6 +72,33 @@ type Server struct {
 	connections map[net.Conn]struct{}
 }
 
+// DefaultReadTimeout is the default value for maximum duration before timing out write of the response
+const DefaultReadTimeout = 5 * time.Second
+
+// DefaultWriteTimeout is the default value for maximum duration before timing out read of the request
+const DefaultWriteTimeout = 5 * time.Second
+
+// configuration for the underlying http server
+var config = []func(s *http.Server){
+	func(s *http.Server) {
+		s.ReadTimeout = DefaultReadTimeout
+		s.WriteTimeout = DefaultWriteTimeout
+	},
+}
+
+// AddServerConfig is used to add or override the default configuration for the underlying http server. It should be called
+// before Run or RunWithErr
+func AddServerConfig(c func(s *http.Server)) {
+	config = append(config, c)
+}
+
+func configureServer(s *http.Server) *http.Server {
+	for _, c := range config {
+		c(s)
+	}
+	return s
+}
+
 // Run serves the http.Handler with graceful shutdown enabled.
 //
 // timeout is the duration to wait until killing active requests and stopping the server.
@@ -79,7 +106,10 @@ type Server struct {
 func Run(addr string, timeout time.Duration, n http.Handler) {
 	srv := &Server{
 		Timeout: timeout,
-		Server:  &http.Server{Addr: addr, Handler: n},
+		Server: configureServer(&http.Server{
+			Addr:    addr,
+			Handler: n,
+		}),
 	}
 
 	if err := srv.ListenAndServe(); err != nil {
@@ -98,7 +128,10 @@ func Run(addr string, timeout time.Duration, n http.Handler) {
 func RunWithErr(addr string, timeout time.Duration, n http.Handler) error {
 	srv := &Server{
 		Timeout: timeout,
-		Server:  &http.Server{Addr: addr, Handler: n},
+		Server: configureServer(&http.Server{
+			Addr:    addr,
+			Handler: n,
+		}),
 	}
 
 	return srv.ListenAndServe()
